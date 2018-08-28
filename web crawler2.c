@@ -35,7 +35,7 @@ struct HASH
 void insert(struct HASH h[], int d, char *str[], int size)
 {
     struct LL *start;
-    int i = 0, k;
+    int i = 0, k, j, flag = 0;
     while (i < size)
     {
         struct LL *n = (struct LL *)malloc(sizeof(struct LL));
@@ -43,7 +43,7 @@ void insert(struct HASH h[], int d, char *str[], int size)
         n->next = NULL;
         n->isvistited = 0;
         n->u.depth = d;
-        k=strlen(str[i])%10;
+        k = strlen(str[i]) % 100;
         if (h[k].head == NULL)
         {
             n->u.str = str[i];
@@ -53,16 +53,27 @@ void insert(struct HASH h[], int d, char *str[], int size)
         }
         else
         {
-            start=h[k].head;
-            while(start!=h[k].end)
+            start = h[k].head;
+            while (start != h[k].end)
             {
-                if(strcmp(start->u.str,str[i])==0)
+                if (strcmp(start->u.str, str[i]) == 0)
                 {
+                    printf("%s %d\n", str[i], k);
                     i++;
-                    k=strlen(str[i])%10;
-                    start=h[k].head;
+                    if (i >= size)
+                    {
+                        flag = 1;
+                        break;
+                    }
+                    k = strlen(str[i]) % 100;
+                    start = h[k].head;
                 }
-                start=start->next;
+                else
+                    start = start->next;
+            }
+            if (flag == 1)
+            {
+                break;
             }
             n->u.str = str[i];
             n->u.key = k;
@@ -70,18 +81,24 @@ void insert(struct HASH h[], int d, char *str[], int size)
             h[k].end = n;
         }
 
-        //printf("%s\n", h[k].end->u.str);
         i++;
     }
-    int j;
-    for (i = 0; i < 9; i++)
+    i = 0;
+    j = 0;
+    while (j < 99)
     {
-        j = 1;
-        while (h[i + j].head == NULL)
+        while (h[i].head == NULL)
+        {
+            i++;
+        }
+        j = i + 1;
+        while (h[j].head == NULL)
         {
             j++;
         }
-        h[i].end->next = h[i + j].head;
+        h[i].end->next = h[j].head;
+        //printf("%d %d\n", i, j);
+        i++;
     }
     //return start;
 }
@@ -311,7 +328,7 @@ void work(char *myurl, struct HASH *h, char *dir, int depth)
 }
 int main(int *argc, char *argv[])
 {
-    struct HASH *h = (struct HASH *)malloc(sizeof(struct HASH) * 10);
+    struct HASH *h = (struct HASH *)malloc(sizeof(struct HASH) * 100);
     int depth, i = 0;
     char *dir = (char *)malloc(sizeof(char) * 2000);
     CHECK_MALLOC(dir);
