@@ -5,7 +5,7 @@
 #include <sys/stat.h>
 #define HASH_SIZE 100
 #define URL_LENGTH 1000
-#define SEED_URL "https://www.chitkara.edu.in"
+#define SEED_URL "https://www.chitkara.edu.in/"
 #define MAX_URL_PER_PAGE 1000
 #define INTERVAL_TIME 10
 int file_no = 1; //global decalartion of file number
@@ -32,7 +32,7 @@ struct HASH
 {
     struct LL *head, *end, *last_visited;
 };
-void insert(struct HASH h[], int d, char *str[], int size)
+void insert(char *myurl, struct HASH h[], int d, char *str[], int size)
 {
     struct LL *start;
     int i = 0, k, j, flag = 0;
@@ -41,8 +41,17 @@ void insert(struct HASH h[], int d, char *str[], int size)
         struct LL *n = (struct LL *)malloc(sizeof(struct LL));
         CHECK_MALLOC(n);
         n->next = NULL;
-        n->isvistited = 0;
-        n->u.depth = d;
+        if (strcmp(myurl, str[i]) == 0)
+        {
+            printf("\n\n%s %ld\n\n", str[i], strlen(str[i]) % 100);
+            n->isvistited = 1;
+            n->u.depth = d;
+        }
+        else
+        {
+            n->isvistited = 0;
+            n->u.depth = d + 1;
+        }
         k = strlen(str[i]) % 100;
         if (h[k].head == NULL)
         {
@@ -58,7 +67,6 @@ void insert(struct HASH h[], int d, char *str[], int size)
             {
                 if (strcmp(start->u.str, str[i]) == 0)
                 {
-                    printf("%s %d\n", str[i], k);
                     i++;
                     if (i >= size)
                     {
@@ -70,6 +78,15 @@ void insert(struct HASH h[], int d, char *str[], int size)
                 }
                 else
                     start = start->next;
+            }
+            if (strcmp(h[k].end->u.str, str[i]) == 0)
+            {
+                i++;
+                if (i >= size)
+                {
+                    flag = 1;
+                    break;
+                }
             }
             if (flag == 1)
             {
@@ -83,6 +100,7 @@ void insert(struct HASH h[], int d, char *str[], int size)
 
         i++;
     }
+
     i = 0;
     j = 0;
     while (j < 99)
@@ -98,9 +116,9 @@ void insert(struct HASH h[], int d, char *str[], int size)
         }
         h[i].end->next = h[j].head;
         //printf("%d %d\n", i, j);
-        i++;
+        i = j;
     }
-    //return start;
+    h[j].end->next = NULL;
 }
 char *tag = "href";
 char to_lower(char c)
@@ -193,6 +211,16 @@ void testDir(char *dir)
         exit(1);
     }
 }
+void check_myurl(char *url)
+{
+    char str[URL_LENGTH + 100] = "wget --spider ";
+    strcat(str, url);
+    //printf("%s",str);
+    if (!system(str))
+        printf("Valid URL");
+    else
+        printf("Invalid URL");
+}
 void check_valid(char *dir, int depth)
 {
     int i, j;
@@ -240,7 +268,7 @@ char *get_in_string(char *dir)
 }
 void *make_dir(char *p)
 {
-    char f[] = ".txt", itostring[2];
+    char f[] = ".txt", itostring[3];
     sprintf(itostring, "%d", file_no++); //converts integer into string
     strcat(p, "/");
     strcat(p, itostring);
@@ -288,43 +316,67 @@ void printLL(struct LL *start)
 {
     while (start != NULL)
     {
-        printf("%d %s\n", start->u.key, start->u.str);
+        printf("d=%d v=%d %d %s\n", start->u.depth, start->isvistited, start->u.key, start->u.str);
         start = start->next;
     }
 }
 void work(char *myurl, struct HASH *h, char *dir, int depth)
 {
-    struct LL *start = NULL;
-    //static int mode = 0;
-    int i, j;
-    char *d = (char *)malloc(sizeof(char) * 2000);
+    char *d = (char *)malloc(sizeof(char) * 2000), *str;
     strcpy(d, dir);
     strcat(d, "/temp.txt");
-    getpage(myurl, d);
-    //printf("%s\n", d);
-    char *str = get_in_string(d);
-    strcpy(d, dir);
-    make_dir(d);
-    printf("%s\n", d);
-    write_to_file(d, str);
+    struct LL *start = h[0].head;
     char *url = (char *)malloc(sizeof(char) * (URL_LENGTH + 1));
     char *url_list[MAX_URL_PER_PAGE] = {0};
+    int i, j = 0, cur_depth = 0, flag = 0;
     i = 0;
     url_list[i++] = SEED_URL;
-    while (i < MAX_URL_PER_PAGE && url_extract(url, URL_LENGTH, &str))
+    for (j = 0;; j++)
     {
-
-        if (check_url(url, url_list, i) == 0)
+        getpage(myurl, d);
+        str = get_in_string(d);
+        strcpy(d, dir);
+        make_dir(d);
+        printf("%s\n", d);
+        write_to_file(d, str);
+        if (j == 0)
+            i = 1;
+        else
+            i = 0;
+        while (i < MAX_URL_PER_PAGE && url_extract(url, URL_LENGTH, &str))
         {
-            char *t = (char *)malloc(sizeof(char) * (URL_LENGTH + 1));
-            strcpy(t, url);
-            url_list[i] = t;
-            //printf("%s %d\n", url_list[i], i);
-            i++;
+
+            if (check_url(url, url_list, i) == 0)
+            {
+                char *t = (char *)malloc(sizeof(char) * (URL_LENGTH + 1));
+                strcpy(t, url);
+                url_list[i] = t;
+                i++;
+            }
         }
+        insert(myurl, h, cur_depth, url_list, i);
+        printLL(h[0].head);
+        start = h[0].head;
+        while (start->isvistited == 1 || start->u.depth > depth)
+        {
+            start = start->next;
+            if (start == NULL)
+            {
+                flag = 1;
+                break;
+            }
+        }
+        if (flag == 1)
+        {
+            break;
+        }
+        start->isvistited = 1;
+        myurl = start->u.str;
+        check_myurl(myurl);
+        printf("\n%d*****%s\n", cur_depth, myurl);
+        cur_depth = start->u.depth;
     }
-    insert(h, depth, url_list, i);
-    printLL(h[0].head);
+    //printLL(h[0].head);
 }
 int main(int *argc, char *argv[])
 {
