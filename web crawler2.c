@@ -38,12 +38,13 @@ void insert(char *myurl, struct HASH h[], int d, char *str[], int size)
     int i = 0, k, j, flag = 0;
     while (i < size)
     {
+        // if (i != size - 1)
+        //     printf("-->%s\n==>%s\n\n", str[i], str[i + 1]);
         struct LL *n = (struct LL *)malloc(sizeof(struct LL));
         CHECK_MALLOC(n);
         n->next = NULL;
         if (strcmp(myurl, str[i]) == 0)
         {
-            printf("\n\n%s %ld\n\n", str[i], strlen(str[i]) % 100);
             n->isvistited = 1;
             n->u.depth = d;
         }
@@ -62,45 +63,33 @@ void insert(char *myurl, struct HASH h[], int d, char *str[], int size)
         }
         else
         {
+            flag = 0;
             start = h[k].head;
             while (start != h[k].end)
             {
                 if (strcmp(start->u.str, str[i]) == 0)
                 {
-                    i++;
-                    if (i >= size)
-                    {
-                        flag = 1;
-                        break;
-                    }
-                    k = strlen(str[i]) % 100;
-                    start = h[k].head;
+                    flag = 1;
+                    break;
                 }
                 else
                     start = start->next;
             }
             if (strcmp(h[k].end->u.str, str[i]) == 0)
             {
-                i++;
-                if (i >= size)
-                {
-                    flag = 1;
-                    break;
-                }
+                flag = 1;
             }
-            if (flag == 1)
+            if (flag != 1)
             {
-                break;
+                n->u.str = str[i];
+                n->u.key = k;
+                h[k].end->next = n;
+                h[k].end = n;
             }
-            n->u.str = str[i];
-            n->u.key = k;
-            h[k].end->next = n;
-            h[k].end = n;
         }
 
         i++;
     }
-
     i = 0;
     j = 0;
     while (j < 99)
@@ -223,7 +212,6 @@ void check_myurl(char *url)
 }
 void check_valid(char *dir, int depth)
 {
-    int i, j;
     if (!system("wget --spider https://chitkara.edu.in"))
         printf("Valid URL");
     else
@@ -266,9 +254,9 @@ char *get_in_string(char *dir)
     fclose(fptr);
     return buff;
 }
-void *make_dir(char *p)
+void make_dir(char *p)
 {
-    char f[] = ".txt", itostring[3];
+    char f[] = ".txt", itostring[5];
     sprintf(itostring, "%d", file_no++); //converts integer into string
     strcat(p, "/");
     strcat(p, itostring);
@@ -301,6 +289,24 @@ int check_url(char *url, char *url_list[], int n)
         }
     }
     i = 0;
+    // while (i != strlen(url))
+    // {
+    //     if (url[i] == '.')
+    //     {
+    //         char ext[4];
+    //         ext[0] = url[i];
+    //         ext[1] = url[i + 1];
+    //         ext[2] = url[i + 2];
+    //         ext[3] = url[i + 3];
+    //         //printf("\n\n%s---%s\n\n", url, ext);
+    //         if (strcmp(ext, ".css") == 0 || strcmp(ext, ".php") == 0 || strcmp(ext, ".ico") == 0 || strcmp(ext, ".jpg") == 0 || strcmp(ext, ".zip") == 0 || strcmp(ext, ".pdf") == 0 || strcmp(ext, ".xml") == 0 || strcmp(ext, ".xls") == 0 || strcmp(ext, ".rar") == 0)
+    //         {
+    //             return 4;
+    //         }
+    //     }
+    //     i++;
+    // }
+    i = 0;
     while (i < n)
     {
         if (strcmp(url, url_list[i]) == 0)
@@ -312,11 +318,51 @@ int check_url(char *url, char *url_list[], int n)
     }
     return 0;
 }
+int NormalizeURL(char *URL)
+{
+    int len = strlen(URL);
+    if (len <= 1)
+        return 0;
+    //! Normalize all URLs.
+    if (URL[len - 1] == '/')
+    {
+        URL[len - 1] = 0;
+        len--;
+    }
+    int i, j;
+    len = strlen(URL);
+    //! Safe check.
+    if (len < 2)
+        return 0;
+    //! Locate the URL's suffix.
+    for (i = len - 1; i >= 0; i--)
+        if (URL[i] == '.')
+            break;
+    for (j = len - 1; j >= 0; j--)
+        if (URL[j] == '/')
+            break;
+    //! We ignore other file types.
+    //! So if a URL link is to a file that are not in the file type of the following
+    //! one of four, then we will discard this URL, and it will not be in the URL list.
+    if ((j >= 7) && (i > j) && ((i + 2) < len))
+    {
+        if ((!strncmp((URL + i), ".htm", 4)) || (!strncmp((URL + i), ".HTM", 4)))
+        {
+            len = len; // do nothing.
+        }
+        else
+        {
+            return 0; // bad type
+        }
+    }
+    return 1;
+}
 void printLL(struct LL *start)
 {
+    int i = 0;
     while (start != NULL)
     {
-        printf("d=%d v=%d %d %s\n", start->u.depth, start->isvistited, start->u.key, start->u.str);
+        printf("%d d=%d v=%d %d %s\n", i++, start->u.depth, start->isvistited, start->u.key, start->u.str);
         start = start->next;
     }
 }
@@ -333,32 +379,44 @@ void work(char *myurl, struct HASH *h, char *dir, int depth)
     url_list[i++] = SEED_URL;
     for (j = 0;; j++)
     {
+
+        if (j == 0)
+        {
+            i = 1;
+        }
+        else
+        {
+            i = 0;
+        }
+        memset(d, 0, sizeof(d));
+        strcpy(d, dir);
+        strcat(d, "/temp.txt");
         getpage(myurl, d);
         str = get_in_string(d);
+        memset(d, 0, sizeof(d));
         strcpy(d, dir);
         make_dir(d);
         printf("%s\n", d);
         write_to_file(d, str);
-        if (j == 0)
-            i = 1;
-        else
-            i = 0;
         while (i < MAX_URL_PER_PAGE && url_extract(url, URL_LENGTH, &str))
         {
-
-            if (check_url(url, url_list, i) == 0)
+            //printf("%s", url);
+            if (check_url(url, url_list, i) == 0 && NormalizeURL(url) == 1)
             {
                 char *t = (char *)malloc(sizeof(char) * (URL_LENGTH + 1));
+                CHECK_MALLOC(t);
                 strcpy(t, url);
                 url_list[i] = t;
                 i++;
             }
         }
+        memset(str, 0, strlen(str));
         insert(myurl, h, cur_depth, url_list, i);
         printLL(h[0].head);
         start = h[0].head;
         while (start->isvistited == 1 || start->u.depth > depth)
         {
+            //printf("-->%d*****%s\n", cur_depth, start->u.str);
             start = start->next;
             if (start == NULL)
             {
@@ -373,15 +431,15 @@ void work(char *myurl, struct HASH *h, char *dir, int depth)
         start->isvistited = 1;
         myurl = start->u.str;
         check_myurl(myurl);
-        printf("\n%d*****%s\n", cur_depth, myurl);
         cur_depth = start->u.depth;
     }
-    //printLL(h[0].head);
+    printLL(h[0].head);
+    printf("\n\n\t\tJOB DONE\n\n");
 }
-int main(int *argc, char *argv[])
+int main()
 {
-    struct HASH *h = (struct HASH *)malloc(sizeof(struct HASH) * 100);
-    int depth, i = 0;
+    struct HASH *h = (struct HASH *)malloc(sizeof(struct HASH) * 101);
+    int depth;
     char *dir = (char *)malloc(sizeof(char) * 2000);
     CHECK_MALLOC(dir);
     printf("enter directory and depth\n");
