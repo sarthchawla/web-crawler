@@ -412,7 +412,7 @@ void work(char *myurl, struct HASH *h, char *dir, int depth)
         }
         memset(str, 0, strlen(str));
         insert(myurl, h, cur_depth, url_list, i);
-        printLL(h[0].head);
+        //printLL(h[0].head);
         start = h[0].head;
         while (start->isvistited == 1 || start->u.depth > depth)
         {
@@ -434,6 +434,7 @@ void work(char *myurl, struct HASH *h, char *dir, int depth)
         cur_depth = start->u.depth;
     }
     printLL(h[0].head);
+    system("clear");
     printf("\n\n\t\tJOB DONE\n\n");
 }
 int main()
