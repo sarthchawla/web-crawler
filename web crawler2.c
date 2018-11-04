@@ -263,10 +263,10 @@ void make_dir(char *p)
     strcat(p, f);
     printf("\nPATH has been created\n");
 }
-void write_to_file(char *d, char *str)
+void write_to_file(char *d, char *str, char mode[])
 {
     FILE *f;
-    f = fopen(d, "w");
+    f = fopen(d, mode);
     fprintf(f, "%s", str);
     //printf("%s", str);
     fclose(f);
@@ -366,9 +366,36 @@ void printLL(struct LL *start)
         start = start->next;
     }
 }
+void itoa(int num, char *result)
+{
+    int r, i = 0, j = 0;
+    char t;
+    if (num == 0)
+    {
+        result[0] = '0';
+        return;
+    }
+    while (num != 0)
+    {
+        r = num % 10;
+        r = r + 48;
+        result[i++] = r;
+        num = num / 10;
+    }
+    result[i] = '\0';
+    i--;
+    while (i >= j)
+    {
+        t = result[i];
+        result[i] = result[j];
+        result[j] = t;
+        i--;
+        j++;
+    }
+}
 void work(char *myurl, struct HASH *h, char *dir, int depth)
 {
-    char *d = (char *)malloc(sizeof(char) * 2000), *str;
+    char *d = (char *)malloc(sizeof(char) * 2000), *str, mydepth[2];
     strcpy(d, dir);
     strcat(d, "/temp.txt");
     struct LL *start = h[0].head;
@@ -397,7 +424,12 @@ void work(char *myurl, struct HASH *h, char *dir, int depth)
         strcpy(d, dir);
         make_dir(d);
         printf("%s\n", d);
-        write_to_file(d, str);
+        write_to_file(d, myurl, "w");
+        write_to_file(d, "\ndepth=", "a");
+        itoa(cur_depth, mydepth);
+        write_to_file(d, mydepth, "a");
+        write_to_file(d, "\n\n", "a");
+        write_to_file(d, str, "a");
         while (i < MAX_URL_PER_PAGE && url_extract(url, URL_LENGTH, &str))
         {
             //printf("%s", url);
